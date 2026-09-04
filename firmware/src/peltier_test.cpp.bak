@@ -1,0 +1,222 @@
+// Peltier bench test — A7IV-TEC
+//
+// Standalone sketch to validate that the TEC actually cools before
+// integrating with the display/animation firmware.
+//
+// Wiring assumed:
+//   GPIO25 -> MOSFET module signal IN
+//   GPIO4  -> DS18B20 data (1-Wire bus, 4.7k pull-up to 3.3V)
+//   Battery -> MOSFET VIN+/VIN-, MOSFET VOUT -> Peltier
+//
+// Serial commands (115200 baud):
+//   on          full power
+//   on 128      50% duty (0-255)
+//   off         stop
+//   ramp        step 25% -> 50% -> 75% -> 100%, 30s each
+//   scan        re-enumerate sensors and print addresses
+
+#include <Arduino.h>
+#include <OneWire.h>
+#include <DallasTemperature.h>
+
+const int PELTIER_PIN = 25;
+const int ONEWIRE_PIN = 4;
+
+const int PWM_CHANNEL = 0;
+const int PWM_FREQ = 1000;
+const int PWM_RESOLUTION = 8;
+
+// Safety: kill the Peltier if any sensor reads above this.
+const float ABORT_TEMP_C = 60.0;
+
+// Safety: hard stop after this long even if nothing is overheating.
+const unsigned long MAX_RUN_MS = 300000UL;  // 5 minutes
+
+const unsigned long LOG_INTERVAL_MS = 1000;
+const unsigned long RAMP_STEP_MS = 30000;
+
+OneWire oneWire(ONEWIRE_PIN);
+DallasTemperature sensors(&oneWire);
+
+int sensorCount = 0;
+int currentDuty = 0;
+unsigned long runStartMs = 0;
+unsigned long lastLogMs = 0;
+
+bool rampActive = false;
+int rampStep = 0;
+unsigned long rampStepStartMs = 0;
+const int RAMP_DUTIES[] = {64, 128, 191, 255};
+
+float startTemps[4];
+bool startTempsCaptured = false;
+
+void setDuty(int duty) {
+  duty = constrain(duty, 0, 255);
+  currentDuty = duty;
+  ledcWrite(PWM_CHANNEL, duty);
+
+  if (duty > 0 && runStartMs == 0) {
+    runStartMs = millis();
+    startTempsCaptured = false;
+  }
+  if (duty == 0) {
+    runStartMs = 0;
+    rampActive = false;
+  }
+}
+
+void stopAll(const char *reason) {
+  setDuty(0);
+  Serial.print("STOP: ");
+  Serial.println(reason);
+}
+
+void printAddress(DeviceAddress addr) {
+  for (uint8_t i = 0; i < 8; i++) {
+    if (addr[i] < 16) Serial.print("0");
+    Serial.print(addr[i], HEX);
+  }
+}
+
+void scanSensors() {
+  sensors.begin();
+  sensorCount = sensors.getDeviceCount();
+  Serial.print("Sensors found: ");
+  Serial.println(sensorCount);
+
+  DeviceAddress addr;
+  for (int i = 0; i < sensorCount; i++) {
+    if (sensors.getAddress(addr, i)) {
+      Serial.print("  index ");
+      Serial.print(i);
+      Serial.print(" -> ");
+      printAddress(addr);
+      Serial.println();
+    }
+  }
+  if (sensorCount == 0) {
+    Serial.println("  WARNING: no sensors. Test will run blind — abort disabled.");
+  }
+}
+
+void handleCommand(String cmd) {
+  cmd.trim();
+  cmd.toLowerCase();
+
+  if (cmd == "off") {
+    stopAll("commanded off");
+  } else if (cmd == "scan") {
+    scanSensors();
+  } else if (cmd == "ramp") {
+    rampActive = true;
+    rampStep = 0;
+    rampStepStartMs = millis();
+    setDuty(RAMP_DUTIES[0]);
+    Serial.println("RAMP: starting at 25%");
+  } else if (cmd.startsWith("on")) {
+    int duty = 255;
+    int space = cmd.indexOf(' ');
+    if (space > 0) duty = cmd.substring(space + 1).toInt();
+    rampActive = false;
+    setDuty(duty);
+    Serial.print("ON at duty ");
+    Serial.println(currentDuty);
+  } else if (cmd.length() > 0) {
+    Serial.println("Commands: on | on <0-255> | off | ramp | scan");
+  }
+}
+
+void setup() {
+  Serial.begin(115200);
+  delay(500);
+
+  ledcSetup(PWM_CHANNEL, PWM_FREQ, PWM_RESOLUTION);
+  ledcAttachPin(PELTIER_PIN, PWM_CHANNEL);
+  setDuty(0);
+
+  Serial.println();
+  Serial.println("=== Peltier bench test ===");
+  scanSensors();
+  Serial.println("Commands: on | on <0-255> | off | ramp | scan");
+  Serial.println("Peltier is OFF. Confirm heatsink + fan are attached before starting.");
+}
+
+void loop() {
+  if (Serial.available()) {
+    handleCommand(Serial.readStringUntil('\n'));
+  }
+
+  unsigned long now = millis();
+
+  if (rampActive && now - rampStepStartMs >= RAMP_STEP_MS) {
+    rampStep++;
+    if (rampStep >= 4) {
+      rampActive = false;
+      Serial.println("RAMP: complete, holding at 100%");
+    } else {
+      rampStepStartMs = now;
+      setDuty(RAMP_DUTIES[rampStep]);
+      Serial.print("RAMP: step to duty ");
+      Serial.println(currentDuty);
+    }
+  }
+
+  if (currentDuty > 0 && runStartMs > 0 && now - runStartMs > MAX_RUN_MS) {
+    stopAll("max run time reached");
+  }
+
+  if (now - lastLogMs < LOG_INTERVAL_MS) return;
+  lastLogMs = now;
+
+  sensors.requestTemperatures();
+
+  Serial.print("duty ");
+  Serial.print(currentDuty);
+  Serial.print(" (");
+  Serial.print((currentDuty * 100) / 255);
+  Serial.print("%)");
+
+  if (currentDuty > 0 && runStartMs > 0) {
+    Serial.print(" | t+");
+    Serial.print((now - runStartMs) / 1000);
+    Serial.print("s");
+  }
+
+  bool capture = (currentDuty > 0 && !startTempsCaptured);
+
+  for (int i = 0; i < sensorCount && i < 4; i++) {
+    float c = sensors.getTempCByIndex(i);
+
+    Serial.print(" | s");
+    Serial.print(i);
+    Serial.print(": ");
+
+    if (c == DEVICE_DISCONNECTED_C || isnan(c)) {
+      Serial.print("--.-");
+      continue;
+    }
+
+    Serial.print(c, 2);
+    Serial.print("C");
+
+    if (capture) startTemps[i] = c;
+
+    if (startTempsCaptured) {
+      float delta = c - startTemps[i];
+      Serial.print(" (");
+      if (delta >= 0) Serial.print("+");
+      Serial.print(delta, 2);
+      Serial.print(")");
+    }
+
+    if (c > ABORT_TEMP_C) {
+      Serial.println();
+      stopAll("sensor exceeded abort temperature");
+      return;
+    }
+  }
+
+  if (capture) startTempsCaptured = true;
+  Serial.println();
+}
