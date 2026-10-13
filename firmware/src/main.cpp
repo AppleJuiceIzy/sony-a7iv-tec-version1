@@ -20,7 +20,7 @@ static const int BTN_PAGE_PIN = 27;
 
 // ------------------------------------------------------------- battery
 // Calibration knob: measure pack voltage with a multimeter and adjust this ratio.
-static const float BATTERY_DIVIDER_RATIO = 2.0f;
+static const float BATTERY_DIVIDER_RATIO = 2.064f;
 static const float ADC_REF_V = 3.3f;
 static const int ADC_MAX = 4095;
 static const int BATTERY_ADC_SAMPLES = 32;
