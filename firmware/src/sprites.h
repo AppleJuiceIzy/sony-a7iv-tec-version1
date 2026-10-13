@@ -19211,7 +19211,7 @@ struct AnimClip {
 };
 
 static const AnimClip ANIM_CLIPS[ANIM_STATE_COUNT] = {
-  { CLIP_LOGO, 1, 1500 },
+  { CLIP_LOGO, 1, 3500 },
   { CLIP_BOOT, 4, 600 },
   { CLIP_COOLED, 1, 1000 },
   { CLIP_NEAR, 3, 300 },
