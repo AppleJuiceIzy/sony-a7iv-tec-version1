@@ -5,15 +5,6 @@ An active thermoelectric cooler for the Sony A7IV with an animated status screen
 <!-- Hero image or GIF: module on the camera, screen animating -->
 
 
-## Status
-
-- [x] Temperature sensing (DS18B20)
-- [x] Proportional Peltier control with an 80% duty cap
-- [x] Animated display, stats page, manual cooling
-- [x] Battery monitoring with calibrated divider
-- [ ] Hot-side sensor and thermal cutoff
-- [ ] Enclosure v1
-
 Built for desk and documentary-style use, not run-and-gun. The Peltier runs on USB-C PD wall power. The battery only powers the electronics.
 
 ## How it works
