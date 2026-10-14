@@ -2,8 +2,14 @@
 
 An active thermoelectric cooler for the Sony A7IV with an animated status screen. It mounts behind the rear display, reads the camera's surface temperature, and drives a Peltier module to pull heat out during long recording sessions.
 
-<!-- Hero image or GIF: module on the camera, screen animating -->
+<p align="center">
+  <img src="images/mounted_on_camera.jpg" width="700" alt="A7IV-TEC mounted on a Sony A7IV">
+</p>
 
+<p align="center">
+  <img src="images/DSC08817.jpg" width="49%" alt="On the rig">
+  <img src="images/DSC08829.jpg" width="49%" alt="Stats page">
+</p>
 
 Built for desk and documentary-style use, not run-and-gun. The Peltier runs on USB-C PD wall power. The battery only powers the electronics.
 
@@ -42,6 +48,8 @@ Peltier duty ramps linearly from 0 at 30°C to the cap at 45°C.
 - **HOT dwell:** once HOT is entered it holds for at least 6s, so a brief spike still reads as an alert.
 - **Duty cap:** `DUTY_MAX = 204` (80%). The PD board supplies 15V but the TEC is a 12V module. 80% duty averages about 12V, and no code path can exceed it.
 
+https://github.com/user-attachments/assets/6ffee958-7b5d-4f13-8549-dd4278680188
+
 ## Hardware
 
 ### Bill of materials
@@ -75,8 +83,12 @@ Peltier duty ramps linearly from 0 at 30°C to the cap at 45°C.
 - Tin snips or scissors for cutting copper
 
 ### Wiring
+<p align="center">
+  <img src="images/DSC08835.jpg" width="700" alt="tec enclosure opened">
+</p>
 
-<!-- Schematic or wiring diagram image -->
+Schematic:
+
 
 | Component | Pin | ESP32 / Rail |
 |---|---|---|
