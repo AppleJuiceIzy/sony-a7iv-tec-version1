@@ -122,7 +122,6 @@ Schematic:
 > - Don't raise `DUTY_MAX` on a 15V supply. It overdrives a 12V module.
 > - Check battery polarity before connecting. Reversed into VIN destroys the ESP32.
 > - Continuity-check BAT to GND before connecting the cell. Expect about 200kΩ from the divider, not a short.
-> - Handle and charge the LiPo with care. It goes in carry-on luggage only, never checked.
 
 ## Firmware
 
