@@ -117,12 +117,6 @@ Schematic:
 
 **Logic-level MOSFET.** Generic "MOSFET trigger modules" usually use an IRF520, which doesn't fully turn on from 3.3V. Use an IRLB8721 or another logic-level part.
 
-> ⚠️ **Safety**
-> - Never run the TEC without the heatsink and paste attached. The hot face passes 80°C within a minute.
-> - Don't raise `DUTY_MAX` on a 15V supply. It overdrives a 12V module.
-> - Check battery polarity before connecting. Reversed into VIN destroys the ESP32.
-> - Continuity-check BAT to GND before connecting the cell. Expect about 200kΩ from the divider, not a short.
-
 ## Firmware
 
 ### Requirements
