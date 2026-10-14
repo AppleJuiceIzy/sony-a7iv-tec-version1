@@ -88,7 +88,9 @@ https://github.com/user-attachments/assets/6ffee958-7b5d-4f13-8549-dd4278680188
 </p>
 
 Schematic:
-
+<p align="center">
+  <img src="images/a7iv_tec_schematic_.png" width="700" alt="py schematic">
+</p>
 
 | Component | Pin | ESP32 / Rail |
 |---|---|---|
